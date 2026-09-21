@@ -36,11 +36,11 @@ To ensure smooth parallel development, please follow these rules:
 
 ### 2. Vision & Image Studio
 **Lead:** [Assignee Name]
-- [ ] Set up Python microservice for image processing.
-- [ ] Integrate background removal (`rembg`) and lighting correction (OpenCV).
-- [ ] Implement photo quality check (blur/dark detection).
-- [ ] Integrate CLIP or a Vision LLM for tagging craft type, material, and category.
-- [ ] Expose `POST /api/vision/process` endpoint.
+- [x] Set up Python microservice for image processing.
+- [x] Integrate background removal (`rembg`) and lighting correction (OpenCV).
+- [x] Implement photo quality check (blur/dark detection).
+- [x] Integrate CLIP or a Vision LLM for tagging craft type, material, and category.
+- [x] Expose `POST /api/vision/process` endpoint.
 
 ### 3. Voice & Listing Generation
 **Lead:** [Assignee Name]
@@ -170,6 +170,15 @@ By agreeing on these shapes today (Day 1), the frontend can use mock data while 
 ---
 
 ## 🛠️ Workstream Tools & CLIs
+
+### Workstream 2: Vision & Image Studio (`vision_studio/`)
+```bash
+# Process an image, perform quality check, remove background, and auto-tag
+python vision_studio/cli.py process test_image.jpg --output cleaned.png
+
+# Start the FastAPI server locally
+python vision_studio/cli.py serve --port 8000
+```
 
 ### Workstream 3: Voice & Listing Generation (`voice_listing/`)
 ```bash
