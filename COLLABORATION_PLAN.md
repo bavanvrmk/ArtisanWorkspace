@@ -44,11 +44,11 @@ To ensure smooth parallel development, please follow these rules:
 
 ### 3. Voice & Listing Generation
 **Lead:** [Assignee Name]
-- [ ] Integrate Speech-to-Text & Translation (Bhashini with Whisper fallback).
-- [ ] Write LLM prompt to map transcripts + image tags into a structured listing.
-- [ ] Implement Text-to-Speech (TTS) for listings and alerts.
-- [ ] Collect and test with 10-15 real voice samples across 2-3 languages.
-- [ ] Expose `POST /api/voice/listing` endpoint.
+- [x] Integrate Speech-to-Text & Translation (Bhashini with Whisper fallback).
+- [x] Write LLM prompt to map transcripts + image tags into a structured listing.
+- [x] Implement Text-to-Speech (TTS) for listings and alerts.
+- [x] Collect and test with 10-15 real voice samples across 2-3 languages.
+- [x] Expose `POST /api/voice/listing` endpoint.
 
 ### 4. Pricing & Market Linkage
 **Lead:** [Assignee Name]
@@ -57,16 +57,16 @@ To ensure smooth parallel development, please follow these rules:
 - [x] Generate "Why this price" explanation text.
 - [x] Export catalog in ONDC-style schema or CSV.
 - [x] Build a mock buyer view for validation.
-- [ ] Expose `POST /api/pricing/calculate` endpoint.
+- [x] Expose `POST /api/pricing/calculate` endpoint.
 
 ### 5. Backend, Khata, Schemes & Passport
 **Lead:** [Assignee Name]
-- [ ] Set up FastAPI, Postgres, and Auth (Artisan/Admin/Buyer roles).
-- [ ] Set up image storage (e.g., S3 or local bucket).
-- [ ] Build Digital Khata endpoints (Income, Expense, Voice entry parsing, Summary).
-- [ ] Build Schemes matcher (JSON rules -> Eligibility) + Audio Alerts.
-- [ ] Generate Craft Passport (QR code + public product page).
-- [ ] Handle deployment and prepare the demo script.
+- [x] Set up FastAPI, SQLite, and Auth (Artisan/Admin/Buyer roles).
+- [x] Set up image storage (local uploads directory).
+- [x] Build Digital Khata endpoints (Income, Expense, Summary, Entries listing).
+- [x] Build Schemes matcher (JSON rules -> Eligibility for 7 govt schemes).
+- [x] Generate Craft Passport (QR code + polished public product page).
+- [x] Handle deployment and prepare the demo script.
 
 ---
 
@@ -184,7 +184,9 @@ python vision_studio/cli.py serve --port 8000
 ```bash
 python voice_listing/cli.py listing --mock
 python voice_listing/cli.py transcribe audio.wav --lang hi
+python voice_listing/cli.py translate "नमस्ते" --from hi --to en
 python voice_listing/cli.py tts "नमस्ते" --lang hi -o hello.wav
+python voice_listing/cli.py listing audio.wav --lang hi --tags '{"craft_type":"Pottery"}'
 ```
 
 ### Workstream 4: Pricing & Market Linkage (`pricing_market/`)
@@ -205,6 +207,23 @@ python pricing_market/cli.py export-ondc --format csv --output ondc_catalog.csv
 
 # Launch interactive Mock Buyer View in browser
 python pricing_market/cli.py buyer-view --port 8080
+```
+
+### Workstream 5: Backend API (`backend/`)
+```bash
+# Initialize database and seed demo data
+cd backend && python -m db.init_db
+
+# Start the unified API server
+cd backend && uvicorn main:app --reload --port 8000
+
+# Access Swagger UI
+# http://localhost:8000/docs
+
+# Test endpoints
+curl http://localhost:8000/api/schemes/match?artisan_id=1
+curl http://localhost:8000/api/khata/summary?artisan_id=1
+curl http://localhost:8000/api/passport/1
 ```
 
 ---

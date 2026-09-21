@@ -45,7 +45,7 @@ class BhashiniClient:
         Parameters
         ----------
         tasks : list[dict]
-            e.g. [{"taskType": "asr"}, {"taskType": "translation"}]
+            e.g. [{"taskType": "asr", "config": {"language": {"sourceLanguage": "hi"}}}]
 
         Returns
         -------
@@ -68,7 +68,12 @@ class BhashiniClient:
         }
 
         resp = requests.post(CONFIG_URL, json=payload, headers=headers, timeout=30)
-        resp.raise_for_status()
+        if not resp.ok:
+            print(f"[ERROR] Pipeline Config failed (HTTP {resp.status_code}):")
+            print(f"  URL: {CONFIG_URL}")
+            print(f"  userID: {self.user_id}")
+            print(f"  Response: {resp.text[:500]}")
+            resp.raise_for_status()
         data = resp.json()
 
         # Extract service IDs from pipelineResponseConfig
@@ -76,8 +81,25 @@ class BhashiniClient:
         for task_config in data.get("pipelineResponseConfig", []):
             task_type = task_config.get("taskType", "")
             config_list = task_config.get("config", [])
+            # Find the specific serviceId for our language, or fallback to first
             if config_list:
-                service_ids[task_type] = config_list[0].get("serviceId", "")
+                # If we passed a specific language, try to match it
+                requested_lang = None
+                for t in tasks:
+                    if t.get("taskType") == task_type:
+                        lang_conf = t.get("config", {}).get("language", {})
+                        requested_lang = lang_conf.get("sourceLanguage") or lang_conf.get("targetLanguage")
+                        break
+                
+                selected_service_id = config_list[0].get("serviceId", "")
+                if requested_lang:
+                    for c in config_list:
+                        lang_block = c.get("language", {})
+                        if lang_block.get("sourceLanguage") == requested_lang or lang_block.get("targetLanguage") == requested_lang:
+                            selected_service_id = c.get("serviceId", "")
+                            break
+                
+                service_ids[task_type] = selected_service_id
 
         # Extract inference endpoint and auth
         endpoint_info = data.get("pipelineInferenceAPIEndPoint", {})
@@ -120,7 +142,11 @@ class BhashiniClient:
         resp = requests.post(
             config["inference_url"], json=payload, headers=headers, timeout=60
         )
-        resp.raise_for_status()
+        if not resp.ok:
+            print(f"[ERROR] Pipeline Compute failed (HTTP {resp.status_code}):")
+            print(f"  URL: {config['inference_url']}")
+            print(f"  Response: {resp.text[:500]}")
+            resp.raise_for_status()
         return resp.json()
 
     # ── Public methods ───────────────────────────────────────────────
@@ -138,7 +164,13 @@ class BhashiniClient:
         -------
         str — transcribed text
         """
-        config = self._configure_pipeline([{"taskType": "asr"}])
+        ext = Path(audio_path).suffix.lower()
+        if ext not in [".wav", ".mp3", ".flac", ".pcm"]:
+            raise ValueError(f"Unsupported audio format '{ext}'. Bhashini ASR expects .wav, .mp3, or .flac")
+
+        config = self._configure_pipeline([
+            {"taskType": "asr", "config": {"language": {"sourceLanguage": source_lang}}}
+        ])
         service_id = config["service_ids"].get("asr", "")
 
         audio_bytes = Path(audio_path).read_bytes()
@@ -179,7 +211,9 @@ class BhashiniClient:
         -------
         str — translated text
         """
-        config = self._configure_pipeline([{"taskType": "translation"}])
+        config = self._configure_pipeline([
+            {"taskType": "translation", "config": {"language": {"sourceLanguage": source_lang, "targetLanguage": target_lang}}}
+        ])
         service_id = config["service_ids"].get("translation", "")
 
         tasks = [
@@ -219,7 +253,9 @@ class BhashiniClient:
         -------
         str — path to the saved audio file
         """
-        config = self._configure_pipeline([{"taskType": "tts"}])
+        config = self._configure_pipeline([
+            {"taskType": "tts", "config": {"language": {"sourceLanguage": lang}}}
+        ])
         service_id = config["service_ids"].get("tts", "")
 
         tasks = [
@@ -265,9 +301,10 @@ class BhashiniClient:
         -------
         dict with keys 'transcript' and 'translated_text'
         """
-        config = self._configure_pipeline(
-            [{"taskType": "asr"}, {"taskType": "translation"}]
-        )
+        config = self._configure_pipeline([
+            {"taskType": "asr", "config": {"language": {"sourceLanguage": source_lang}}},
+            {"taskType": "translation", "config": {"language": {"sourceLanguage": source_lang, "targetLanguage": target_lang}}}
+        ])
         asr_service = config["service_ids"].get("asr", "")
         nmt_service = config["service_ids"].get("translation", "")
 

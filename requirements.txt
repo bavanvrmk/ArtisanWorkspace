@@ -1,0 +1,34 @@
+# ============================================================
+# Artisan Workspace — Unified Requirements
+# ============================================================
+# Install all dependencies for all workstreams:
+#   pip install -r requirements.txt
+# ============================================================
+
+# --- Backend (FastAPI + Auth + DB) ---
+fastapi
+uvicorn
+sqlalchemy
+python-jose[cryptography]
+passlib[bcrypt]
+python-multipart
+qrcode[pil]
+Pillow
+pydantic
+pydantic-settings
+
+# --- Voice & Listing (Workstream 3) ---
+requests>=2.31.0
+python-dotenv>=1.0.0
+click>=8.1.0
+google-genai>=1.0.0
+
+# --- Vision Studio (Workstream 2) --- [Optional: heavy ML deps]
+# Uncomment below if you need real image processing:
+# rembg[cpu]
+# opencv-python-headless
+# transformers
+# torch
+
+# --- Pricing (Workstream 4) ---
+# click already listed above

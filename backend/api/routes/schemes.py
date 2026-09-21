@@ -1,16 +1,63 @@
-from fastapi import APIRouter
+"""
+Schemes Eligibility API Route — Real Matching
+==============================================
+Matches artisan profile against government scheme eligibility rules.
+Matches Contract E.
+"""
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.orm import Session
+from api.deps import get_db
+from models.user import User
+from schemes_data import match_schemes
 
 router = APIRouter()
 
+
 @router.get("/match")
-def match_schemes(artisan_id: str):
+def match_schemes_endpoint(
+    artisan_id: str = Query(...),
+    db: Session = Depends(get_db),
+):
+    """
+    Match an artisan against eligible government schemes.
+    Matches API Contract E from COLLABORATION_PLAN.md.
+    """
+    # Look up artisan profile
+    user = db.query(User).filter(User.id == int(artisan_id)).first()
+
+    if user:
+        eligible = match_schemes(
+            craft_type=user.craft_type,
+            age=user.age,
+            annual_income=user.annual_income,
+            gender=user.gender,
+            state=user.state,
+        )
+    else:
+        # If no user found, return all schemes (no filters to restrict)
+        eligible = match_schemes()
+
     return {
-        "eligible_schemes": [
+        "artisan_id": artisan_id,
+        "eligible_count": len(eligible),
+        "eligible_schemes": eligible,
+    }
+
+
+@router.get("/all")
+def list_all_schemes():
+    """List all available government schemes in the database."""
+    from schemes_data import SCHEMES
+    return {
+        "total_schemes": len(SCHEMES),
+        "schemes": [
             {
-                "scheme_id": "sch_01",
-                "name": "PM Vishwakarma Yojana",
-                "benefit": "Subsidized loan up to ₹1 Lakh",
-                "audio_summary_url": "https://storage.../scheme-audio.mp3"
+                "scheme_id": s["scheme_id"],
+                "name": s["name"],
+                "ministry": s["ministry"],
+                "benefit": s["benefit"],
+                "link": s["link"],
             }
-        ]
+            for s in SCHEMES
+        ],
     }
