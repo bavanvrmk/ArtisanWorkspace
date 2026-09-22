@@ -17,7 +17,8 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from api.routes import auth, khata, schemes, passport, vision_mock, voice_mock, pricing_mock
+
+from api.routes import auth, khata, schemes, passport, vision_mock, voice_mock, pricing_mock, translation
 from core.config import settings
 from db.init_db import init_db
 
@@ -49,6 +50,7 @@ app.include_router(passport.router, prefix="/api/passport", tags=["Craft Passpor
 app.include_router(vision_mock.router, prefix="/api/vision", tags=["Vision & Image Studio"])
 app.include_router(voice_mock.router, prefix="/api/voice", tags=["Voice & Listing"])
 app.include_router(pricing_mock.router, prefix="/api/pricing", tags=["Pricing & Market"])
+app.include_router(translation.router, prefix="/api/translate", tags=["Bhashini Translation"])
 
 
 @app.get("/", tags=["Root"])

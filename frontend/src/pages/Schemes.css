@@ -1,0 +1,62 @@
+.schemes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.match-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(16, 185, 129, 0.05);
+  border-color: rgba(16, 185, 129, 0.2);
+}
+
+.scheme-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.scheme-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.scheme-header .icon-wrap {
+  background: rgba(99, 102, 241, 0.1);
+  padding: 8px;
+  border-radius: 12px;
+}
+
+.scheme-header h3 {
+  font-size: 16px;
+  line-height: 1.3;
+}
+
+.scheme-ministry {
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+}
+
+.scheme-benefit {
+  font-size: 14px;
+  background: rgba(0,0,0,0.2);
+  padding: 12px;
+  border-radius: var(--border-radius-sm);
+  border-left: 3px solid var(--accent-secondary);
+}
+
+.scheme-card .btn-secondary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(99, 102, 241, 0.15);
+  border-color: rgba(99, 102, 241, 0.3);
+  color: #c7d2fe;
+}
