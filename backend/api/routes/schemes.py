@@ -24,21 +24,43 @@ def match_schemes_endpoint(
     """
     # Look up artisan profile
     user = db.query(User).filter(User.id == int(artisan_id)).first()
+    if not user:
+        return {
+            "artisan_id": artisan_id,
+            "needs_profile": True,
+            "eligible_count": 0,
+            "eligible_schemes": [],
+            "message": "Tell us your age, gender, craft, yearly income, and state first.",
+        }
 
-    if user:
-        eligible = match_schemes(
-            craft_type=user.craft_type,
-            age=user.age,
-            annual_income=user.annual_income,
-            gender=user.gender,
-            state=user.state,
-        )
-    else:
-        # If no user found, return all schemes (no filters to restrict)
-        eligible = match_schemes()
+    complete = all(
+        [
+            user.age is not None,
+            bool(user.gender),
+            bool(user.craft_type),
+            user.annual_income is not None,
+            bool(user.state),
+        ]
+    )
+    if not complete:
+        return {
+            "artisan_id": artisan_id,
+            "needs_profile": True,
+            "eligible_count": 0,
+            "eligible_schemes": [],
+            "message": "Tell us your age, gender, craft, yearly income, and state first.",
+        }
 
+    eligible = match_schemes(
+        craft_type=user.craft_type,
+        age=user.age,
+        annual_income=user.annual_income,
+        gender=user.gender,
+        state=user.state,
+    )
     return {
         "artisan_id": artisan_id,
+        "needs_profile": False,
         "eligible_count": len(eligible),
         "eligible_schemes": eligible,
     }

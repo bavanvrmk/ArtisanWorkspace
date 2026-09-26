@@ -17,6 +17,9 @@ import requests
 from pathlib import Path
 from dotenv import load_dotenv
 
+# Always load voice_listing/.env even when the API runs from backend/
+load_dotenv(Path(__file__).resolve().parent / ".env", override=False)
+load_dotenv(Path(__file__).resolve().parents[1] / ".env", override=False)
 load_dotenv()
 
 # ── Bhashini constants ──────────────────────────────────────────────
@@ -28,12 +31,12 @@ class BhashiniClient:
     """Thin wrapper around the Bhashini/ULCA pipeline APIs."""
 
     def __init__(self, user_id: str = None, api_key: str = None):
-        self.user_id = user_id or os.getenv("BHASHINI_USER_ID", "")
-        self.api_key = api_key or os.getenv("BHASHINI_API_KEY", "")
+        self.user_id = (user_id or os.getenv("BHASHINI_USER_ID", "")).strip().strip('"').strip("'")
+        self.api_key = (api_key or os.getenv("BHASHINI_API_KEY", "")).strip().strip('"').strip("'")
         if not self.user_id or not self.api_key:
             raise ValueError(
-                "BHASHINI_USER_ID and BHASHINI_API_KEY must be set in .env "
-                "or passed as arguments."
+                "BHASHINI_USER_ID and BHASHINI_API_KEY must be set in voice_listing/.env "
+                "or the repo-root .env (the API now loads both)."
             )
 
     # ── Step 1: Pipeline Config ──────────────────────────────────────
@@ -289,62 +292,38 @@ class BhashiniClient:
         target_lang: str = "en",
     ) -> dict:
         """
-        Chain ASR + Translation in a single pipeline call.
+        Transcribe audio, then translate if needed.
 
-        Parameters
-        ----------
-        audio_path : str — path to audio file
-        source_lang : str — language of the audio
-        target_lang : str — language to translate into
-
-        Returns
-        -------
-        dict with keys 'transcript' and 'translated_text'
+        MeitY pipelines often reject a combined ASR+NMT config call
+        ("No supported tasks found") and do not offer English ASR.
         """
-        config = self._configure_pipeline([
-            {"taskType": "asr", "config": {"language": {"sourceLanguage": source_lang}}},
-            {"taskType": "translation", "config": {"language": {"sourceLanguage": source_lang, "targetLanguage": target_lang}}}
-        ])
-        asr_service = config["service_ids"].get("asr", "")
-        nmt_service = config["service_ids"].get("translation", "")
+        speech_lang = _speech_lang(source_lang)
+        transcript = self.speech_to_text(audio_path, source_lang=speech_lang)
+        translated = transcript
+        if transcript and speech_lang != target_lang:
+            try:
+                translated = self.translate(
+                    transcript, source_lang=speech_lang, target_lang=target_lang
+                ) or transcript
+            except Exception:
+                translated = transcript
+        return {"transcript": transcript, "translated_text": translated, "source_lang": speech_lang}
 
-        audio_bytes = Path(audio_path).read_bytes()
-        audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
 
-        tasks = [
-            {
-                "taskType": "asr",
-                "config": {
-                    "language": {"sourceLanguage": source_lang},
-                    "serviceId": asr_service,
-                },
-            },
-            {
-                "taskType": "translation",
-                "config": {
-                    "language": {
-                        "sourceLanguage": source_lang,
-                        "targetLanguage": target_lang,
-                    },
-                    "serviceId": nmt_service,
-                },
-            },
-        ]
-        input_data = {"audio": [{"audioContent": audio_b64}]}
-
-        result = self._compute(config, tasks, input_data)
-
-        transcript = ""
-        translated = ""
-        try:
-            responses = result.get("pipelineResponse", [])
-            # ASR output
-            if len(responses) > 0:
-                transcript = responses[0]["output"][0]["source"]
-            # NMT output
-            if len(responses) > 1:
-                translated = responses[1]["output"][0]["target"]
-        except (KeyError, IndexError):
-            pass
-
-        return {"transcript": transcript, "translated_text": translated}
+def _speech_lang(code: str) -> str:
+    raw = (code or "hi").strip().lower()
+    aliases = {
+        "en": "hi",
+        "eng": "hi",
+        "english": "hi",
+        "hi": "hi",
+        "hin": "hi",
+        "hindi": "hi",
+        "ta": "ta",
+        "tam": "ta",
+        "tamil": "ta",
+        "te": "te",
+        "tel": "te",
+        "telugu": "te",
+    }
+    return aliases.get(raw, "hi")

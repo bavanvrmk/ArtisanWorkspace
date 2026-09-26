@@ -78,7 +78,7 @@ SCHEMES = [
         "benefit": "Concessional loan up to ₹10 Lakh for handloom weavers with margin money assistance",
         "eligibility": {
             "max_annual_income": 500000,
-            "craft_types": ["Handloom Weaving", "Banarasi"],
+            "craft_types": ["Handloom Weaving", "Banarasi", "Weaving"],
             "min_age": 18,
             "max_age": None,
             "gender": None,
@@ -166,12 +166,12 @@ def match_schemes(
 
         # Check craft type
         if rules["craft_types"] is not None and craft_type is not None:
-            if craft_type not in rules["craft_types"]:
+            allowed = {c.lower() for c in rules["craft_types"]}
+            if craft_type.lower() not in allowed:
                 is_eligible = False
 
-        # Check gender
         if rules["gender"] is not None and gender is not None:
-            if gender != rules["gender"]:
+            if gender.lower() != str(rules["gender"]).lower():
                 is_eligible = False
 
         # Check state

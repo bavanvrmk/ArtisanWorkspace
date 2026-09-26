@@ -11,7 +11,9 @@ back to a simple template-based generator.
 import json
 import os
 from dotenv import load_dotenv
+from pathlib import Path
 
+load_dotenv(Path(__file__).resolve().parent / ".env", override=False)
 load_dotenv()
 
 # ── Prompt template for the LLM ─────────────────────────────────────
@@ -96,22 +98,23 @@ def _generate_with_template(
     Produces a reasonable listing from the raw inputs.
     """
     # Build a title from the tags
-    title = f"Handcrafted {material} {craft_type} — {category}"
-    if len(title) > 80:
-        title = f"Handcrafted {material} {craft_type}"
+    spoken = (transcript or "").strip()
+    snippet = spoken.split(".")[0].strip()[:48] if spoken else ""
+    title = f"{snippet} · {material} {craft_type}" if snippet else f"Handcrafted {material} {craft_type}"
+    if spoken:
+        description = (
+            f"{title} for {category}. "
+            f"The maker says: {spoken} "
+            f"Crafted in {material} using traditional {craft_type.lower()} methods. "
+            f"Each piece is unique."
+        )
+    else:
+        description = (
+            f"{title} made with {material} for {category}. "
+            "Handmade by an Indian artisan using traditional methods."
+        )
 
-    # Build description from transcript
-    description = (
-        f"This exquisite {craft_type.lower()} is handcrafted by skilled Indian artisans "
-        f"using traditional {material.lower()} techniques. "
-        f"{transcript} "
-        f"Perfect for {category.lower()} enthusiasts, this piece combines cultural "
-        f"heritage with functional beauty. Each item is unique, reflecting the "
-        f"artisan's individual style and years of expertise."
-    )
-
-    # Generate SEO tags
-    seo_tags = list(
+    seo_tags = sorted(
         {
             craft_type.lower(),
             material.lower(),
@@ -127,11 +130,13 @@ def _generate_with_template(
     )
 
     return {
-        "title": title,
+        "title": title[:80],
         "description": description,
-        "seo_tags": sorted(seo_tags),
-        "hindi_title": f"हस्तनिर्मित {craft_type}",
-        "hindi_description": f"यह {craft_type} कुशल भारतीय कारीगरों द्वारा हस्तनिर्मित है।",
+        "seo_tags": seo_tags,
+        "hindi_title": f"हस्तनिर्मित {material} {craft_type}",
+        "hindi_description": (
+            f"यह {material} {craft_type} भारतीय कारीगर द्वारा हाथ से बनाया गया है। {spoken}"
+        ).strip(),
     }
 
 
@@ -153,13 +158,13 @@ def generate_listing(
     -------
     dict with keys: title, description, seo_tags, hindi_title, hindi_description
     """
-    craft_type = image_tags.get("craft_type", "Handicraft")
-    material = image_tags.get("material", "Mixed")
-    category = image_tags.get("category", "Home Decor")
+    craft_type = image_tags.get("craft_type") or "Handicraft"
+    material = image_tags.get("material") or "Mixed"
+    category = image_tags.get("category") or "Home Decor"
 
-    # Try Gemini first, fall back to template
     result = None
-    if os.getenv("GEMINI_API_KEY"):
+    gemini_key = (os.getenv("GEMINI_API_KEY") or "").strip().strip('"')
+    if gemini_key:
         result = _generate_with_gemini(transcript, craft_type, material, category)
 
     if result is None:

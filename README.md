@@ -18,16 +18,30 @@ python -m venv venv
 venv\Scripts\activate  # Windows
 # source venv/bin/activate  # macOS/Linux
 
-# 3. Install dependencies
+# 3. Install Python dependencies
 pip install -r requirements.txt
 
-# 4. Initialize database with demo data
+# 4. Start API + web UI together
+python dev.py
+# or double-click start.bat on Windows
+```
+
+Then open **http://localhost:5173** (login: `demo_artisan`).
+
+API docs stay at http://localhost:8000/docs.
+
+To run services separately:
+
+```bash
+# Backend
 cd backend
 python -m db.init_db
+python -m uvicorn main:app --reload --port 8000
 
-# 5. Start the API server
-uvicorn main:app --reload --port 8000
-# Visit http://localhost:8000/docs for Swagger UI
+# Frontend (another terminal)
+cd frontend
+npm install
+npm run dev
 ```
 
 ---
@@ -45,6 +59,7 @@ ArtisanWorkspace/
 ├── vision_studio/      # Workstream 2: Image processing, bg removal, CLIP tagging
 ├── voice_listing/      # Workstream 3: Bhashini STT/TTS, listing generation
 ├── pricing_market/     # Workstream 4: Cost-plus pricing, ONDC export, buyer view
+├── frontend/           # React (Vite) web app
 ├── pricing/            # Early pricing prototype (superseded by pricing_market/)
 └── COLLABORATION_PLAN.md
 ```

@@ -11,6 +11,8 @@ from sqlalchemy.orm import Session
 from api.deps import get_db
 from models.product import Product
 from models.user import User
+from pydantic import BaseModel
+from typing import Optional
 import qrcode
 import os
 import base64
@@ -20,6 +22,17 @@ router = APIRouter()
 
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+
+class ProductCreate(BaseModel):
+    artisan_id: int
+    title: str
+    description: str
+    retail_price: float = 0
+    b2b_price: float = 0
+    craft_type: str = "Handicraft"
+    material: str = "Mixed"
+    image_url: Optional[str] = None
 
 
 def _generate_qr_base64(url: str) -> str:
@@ -38,14 +51,8 @@ def _generate_qr_base64(url: str) -> str:
     return base64.b64encode(buf.getvalue()).decode("utf-8")
 
 
-@router.get("/{product_id}", response_class=HTMLResponse)
-def get_passport(product_id: int, request: Request, db: Session = Depends(get_db)):
-    """
-    Render a polished Craft Passport — the public product page.
-    """
+def _resolve_product(product_id: int, db: Session):
     product = db.query(Product).filter(Product.id == product_id).first()
-
-    # Fallback demo product if not found
     if not product:
         product = Product(
             id=product_id,
@@ -61,15 +68,70 @@ def get_passport(product_id: int, request: Request, db: Session = Depends(get_db
             material="Terracotta",
             artisan_id=1,
         )
-
-    # Try to look up artisan
     artisan = None
     if product.artisan_id:
         artisan = db.query(User).filter(User.id == product.artisan_id).first()
-
     artisan_name = artisan.full_name if artisan else "Master Artisan"
     artisan_craft = artisan.craft_type if artisan and artisan.craft_type else product.craft_type
     artisan_state = artisan.state if artisan and artisan.state else "India"
+    return product, artisan_name, artisan_craft, artisan_state
+
+
+@router.post("/create")
+def create_product(body: ProductCreate, request: Request, db: Session = Depends(get_db)):
+    product = Product(
+        artisan_id=body.artisan_id,
+        title=body.title,
+        description=body.description,
+        retail_price=body.retail_price,
+        b2b_price=body.b2b_price,
+        craft_type=body.craft_type,
+        material=body.material,
+        image_url=body.image_url,
+    )
+    db.add(product)
+    db.commit()
+    db.refresh(product)
+    base = str(request.base_url).rstrip("/")
+    return {
+        "product_id": product.id,
+        "public_url": f"{base}/api/passport/{product.id}",
+        "qr_url": f"/api/passport/{product.id}/qr",
+    }
+
+
+@router.get("/{product_id}/data")
+def get_passport_data(product_id: int, request: Request, db: Session = Depends(get_db)):
+    """JSON Craft Passport for the web app."""
+    product, artisan_name, artisan_craft, artisan_state = _resolve_product(product_id, db)
+    base_url = str(request.base_url).rstrip("/")
+    product_url = f"{base_url}/api/passport/{product_id}"
+    qr_url = f"/api/passport/{product_id}/qr"
+    return {
+        "product_id": product_id,
+        "title": product.title,
+        "description": product.description,
+        "craft_type": product.craft_type,
+        "material": product.material,
+        "retail_price": product.retail_price,
+        "b2b_price": product.b2b_price,
+        "image_url": product.image_url,
+        "artisan": {
+            "name": artisan_name,
+            "craft": artisan_craft,
+            "state": artisan_state,
+        },
+        "public_url": product_url,
+        "qr_url": qr_url,
+    }
+
+
+@router.get("/{product_id}", response_class=HTMLResponse)
+def get_passport(product_id: int, request: Request, db: Session = Depends(get_db)):
+    """
+    Render a polished Craft Passport — the public product page.
+    """
+    product, artisan_name, artisan_craft, artisan_state = _resolve_product(product_id, db)
 
     # Generate QR code inline
     base_url = str(request.base_url).rstrip("/")
