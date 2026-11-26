@@ -2,7 +2,7 @@
 
 **Empowering Indian Artisans through Technology** — A unified platform that helps rural craftworkers create professional marketplace listings using voice input, get fair AI-powered pricing, track finances, and discover government schemes.
 
-> Built for Smart India Hackathon (SIH) 2025 — CLI-First Architecture
+> Built for Smart India Hackathon (SIH) 2026 — CLI-First Architecture
 
 ---
 
